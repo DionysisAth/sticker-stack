@@ -7,13 +7,14 @@ var _t := 0.0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	theme = UITheme.get_theme()
 	add_child(Backdrop.make(Save.level))
 	_add_decoration()
 
 	var safe := Screen.safe_margins(self)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 36)
 	margin.add_theme_constant_override("margin_right", 36)
 	margin.add_theme_constant_override("margin_top", 24 + int(safe.x))
@@ -81,7 +82,7 @@ func _add_decoration() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	var shapes := LevelGenerator.SHAPES
-	var spots := [Vector2(0.12, 0.2), Vector2(0.85, 0.24), Vector2(0.18, 0.5), Vector2(0.82, 0.52), Vector2(0.5, 0.12), Vector2(0.1, 0.72), Vector2(0.9, 0.75)]
+	var spots := [Vector2(0.12, 0.2), Vector2(0.85, 0.24), Vector2(0.18, 0.5), Vector2(0.82, 0.52), Vector2(0.5, 0.12)]
 	for i in spots.size():
 		var v := StickerView.new()
 		v.size = rng.randf_range(90, 130)

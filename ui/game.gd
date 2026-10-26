@@ -54,15 +54,16 @@ func _ready() -> void:
 # --- Layout ----------------------------------------------------------------
 
 func _build_ui() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	theme = UITheme.get_theme()
 	bg = TextureRect.new()
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.stretch_mode = TextureRect.STRETCH_SCALE
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var safe := Screen.safe_margins(self)
 	margin.add_theme_constant_override("margin_left", 20)
 	margin.add_theme_constant_override("margin_right", 20)
@@ -128,10 +129,15 @@ func _build_ui() -> void:
 	fx = Node2D.new()
 	fx.z_index = 10
 	add_child(fx)
+	# Cards get their own canvas layer so no sticker can draw over them.
+	var card_layer := CanvasLayer.new()
+	card_layer.layer = 5
+	add_child(card_layer)
 	cards = Control.new()
-	cards.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cards.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	cards.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(cards)
+	cards.theme = UITheme.get_theme()
+	card_layer.add_child(cards)
 
 
 # --- Level flow ------------------------------------------------------------
@@ -275,7 +281,7 @@ func _on_blocked(e: Dictionary) -> void:
 	Audio.play("blocked")
 	if v != null:
 		# Shake around its resting spot, so quick repeated taps don't drift.
-		var x := v.get_parent().to_local(board.sticker_global_pos(e.id)).x
+		var x: float = (v.get_parent() as Node2D).to_local(board.sticker_global_pos(e.id)).x
 		var t := v.create_tween()
 		for k in [10.0, -8.0, 5.0, 0.0]:
 			t.tween_property(v, "position:x", x + k, 0.04)

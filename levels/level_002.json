@@ -1,0 +1,27 @@
+{
+  "level": 2,
+  "hard": false,
+  "tutorial": "layers",
+  "seed": 2029,
+  "bot_win_rate": 1.0,
+  "types": [
+    {"shape":"bolt","color":1},
+    {"shape":"circle","color":2},
+    {"shape":"drop","color":5}
+  ],
+  "stickers": [
+    {"type":0,"x":4,"y":6,"z":0},
+    {"type":2,"x":6,"y":6,"z":0},
+    {"type":2,"x":4,"y":4,"z":0},
+    {"type":2,"x":6,"y":4,"z":0},
+    {"type":0,"x":4,"y":8,"z":0},
+    {"type":0,"x":6,"y":8,"z":0},
+    {"type":0,"x":2,"y":6,"z":0},
+    {"type":1,"x":5,"y":7,"z":1},
+    {"type":1,"x":5,"y":5,"z":1},
+    {"type":0,"x":3,"y":5,"z":1},
+    {"type":0,"x":7,"y":5,"z":1},
+    {"type":1,"x":5,"y":9,"z":1}
+  ],
+  "solution": [8,11,7,5,4,9,10,6,0,2,3,1]
+}

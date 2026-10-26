@@ -1,0 +1,42 @@
+{
+  "level": 12,
+  "hard": false,
+  "tutorial": "",
+  "seed": 12019,
+  "bot_win_rate": 0.76,
+  "types": [
+    {"shape":"triangle","color":0},
+    {"shape":"heart","color":3},
+    {"shape":"flower","color":8},
+    {"shape":"diamond","color":1},
+    {"shape":"cloud","color":6}
+  ],
+  "stickers": [
+    {"type":2,"x":4,"y":6,"z":0,"kind":"mystery"},
+    {"type":4,"x":6,"y":6,"z":0,"kind":"mystery"},
+    {"type":4,"x":4,"y":4,"z":0,"kind":"mystery"},
+    {"type":0,"x":6,"y":4,"z":0},
+    {"type":0,"x":4,"y":8,"z":0},
+    {"type":1,"x":6,"y":8,"z":0,"kind":"mystery"},
+    {"type":4,"x":2,"y":6,"z":0},
+    {"type":4,"x":8,"y":6,"z":0,"kind":"mystery"},
+    {"type":2,"x":2,"y":8,"z":0},
+    {"type":0,"x":8,"y":8,"z":0,"kind":"mystery"},
+    {"type":0,"x":4,"y":10,"z":0},
+    {"type":4,"x":6,"y":10,"z":0,"kind":"mystery"},
+    {"type":1,"x":4,"y":2,"z":0},
+    {"type":1,"x":6,"y":2,"z":0},
+    {"type":0,"x":0,"y":6,"z":0},
+    {"type":4,"x":5,"y":7,"z":1},
+    {"type":2,"x":5,"y":5,"z":1},
+    {"type":3,"x":5,"y":3,"z":1,"kind":"roll","roll":[2,0,2]},
+    {"type":1,"x":5,"y":9,"z":1},
+    {"type":1,"x":3,"y":7,"z":1},
+    {"type":0,"x":7,"y":7,"z":1},
+    {"type":0,"x":3,"y":5,"z":1},
+    {"type":2,"x":7,"y":5,"z":1,"kind":"roll","roll":[3,1]},
+    {"type":3,"x":5,"y":11,"z":1},
+    {"type":3,"x":5,"y":1,"z":1,"kind":"roll","roll":[3,3,0]}
+  ],
+  "solution": [24,24,23,24,17,22,17,22,17,17,24,21,12,18,14,13,19,22,20,10,15,5,11,16,8,2,0,1,7,6,3,4,9]
+}

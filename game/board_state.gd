@@ -9,9 +9,10 @@ extends RefCounted
 enum Status { PLAYING, WON, FAILED }
 
 const TRAY_SIZE := Tray.CAPACITY
-## Return 3 puts stickers back in a row under the pile at these x positions.
+## Return 3 puts stickers back in a row under the pile at these x positions
+## (the dispensers, when a level has them, sit at both ends of that row).
 const RETURN_ROW_Y := 14
-const RETURN_ROW_X: Array[int] = [2, 5, 8]
+const RETURN_ROW_X: Array[int] = [3, 5, 7]
 
 const RULE_SCRIPTS := {
 	"roll": preload("res://game/rules/roll_rule.gd"),

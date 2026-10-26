@@ -63,12 +63,17 @@ func test_return_three() -> void:
 func test_shuffle_keeps_types() -> void:
 	var data := LevelData.load_level(12)
 	var st := BoardState.from_level(data)
-	var before := {}
-	for x in st.stickers:
-		before[x.type] = before.get(x.type, 0) + x.count()
+	var before := _type_counts(st)
 	check(st.shuffle(), "found a winnable mix")
-	var after := {}
-	for x in st.stickers:
-		after[x.type] = after.get(x.type, 0) + x.count()
-	eq(after, before)
+	eq(_type_counts(st), before)
 	check(SolverBot.can_win(st, 30), "still winnable after shuffle")
+
+
+func _type_counts(st: BoardState) -> Dictionary:
+	var counts := {}
+	for x in st.stickers:
+		if not x.alive:
+			continue
+		for t in [x.type] + Array(x.roll):
+			counts[t] = counts.get(t, 0) + 1
+	return counts

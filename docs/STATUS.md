@@ -89,7 +89,10 @@ still needs a person, an account or a real phone.
 6. **Testers.** Recruit by week 6; start the Play closed test (12 testers,
    14 days) on day one of week 8.
 7. **Hand tuning.** Play the 50 levels; replace any that feel off in the
-   level editor. `levels/README.md` shows the bot score for each.
+   level editor. `levels/README.md` shows the bot score for each. Most are
+   within a few points of their target; the furthest off are level 38
+   (bot 54%, target 72%), level 30 (Hard, 46% vs 35%), level 43 (61% vs 72%)
+   and level 17 (83% vs 75%).
 8. **Store listing.** `tools/screenshots.gd` captures the real screens as a
    starting point; icons are in `assets/` (512 px and 1024 px included).
    Still needed: feature graphic, preview video, descriptions, privacy policy.

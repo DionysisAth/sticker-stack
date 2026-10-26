@@ -38,6 +38,7 @@ const BACKDROPS: Array = [
 	[Color("#d6d0ff"), Color("#c7f2f0")],
 ]
 
+static var _theme: Theme
 static var _font_bold: Font
 static var _font_semi: Font
 
@@ -60,6 +61,13 @@ static func sticker_color(index: int) -> Color:
 
 static func backdrop(level: int) -> Array:
 	return BACKDROPS[posmod(level - 1, BACKDROPS.size())]
+
+
+## The shared theme. Every screen sets it on its root Control.
+static func get_theme() -> Theme:
+	if _theme == null:
+		_theme = build()
+	return _theme
 
 
 static func build() -> Theme:

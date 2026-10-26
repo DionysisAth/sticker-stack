@@ -19,6 +19,7 @@ var wrapped := false
 var fuse := 0
 var glue_dir := Vector2.ZERO
 var queue_depth := 0       # dispenser: stickers behind this one
+var queue_side := -1.0     # which way the queue fans out (-1 left, 1 right)
 
 var _dim := 0.0
 
@@ -59,6 +60,8 @@ func _apply_dim() -> void:
 
 
 func _draw() -> void:
+	if size < 4.0:
+		return
 	var r := size * 0.5 * 0.8
 	# Roll: the stack edges peek out below.
 	if roll_count > 1:
@@ -69,7 +72,7 @@ func _draw() -> void:
 	# Dispenser: the queue behind the front sticker.
 	if queue_depth > 0:
 		for i in range(mini(queue_depth, 3), 0, -1):
-			StickerArt.draw(self, Vector2(0, -i * r * 0.22), r * 0.92, "square", Color("#e9e1f2"), {"shadow": false})
+			StickerArt.draw(self, Vector2(queue_side * i * r * 0.2, i * r * 0.06), r * 0.92, "square", Color("#e9e1f2"), {"shadow": false})
 	# Glue tape sits under the sticker edge.
 	if glue_dir != Vector2.ZERO:
 		_tape(r)

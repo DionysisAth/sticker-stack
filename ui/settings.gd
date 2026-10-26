@@ -10,11 +10,12 @@ const TOGGLES := [
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	theme = UITheme.get_theme()
 	add_child(Backdrop.make(Save.level + 1))
 	var safe := Screen.safe_margins(self)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 32)
 	margin.add_theme_constant_override("margin_right", 32)
 	margin.add_theme_constant_override("margin_top", 24 + int(safe.x))

@@ -8,6 +8,8 @@ const DIR := "res://tests/unit/"
 
 
 func _ready() -> void:
+	# Let the tree finish setting up so tests can add scenes to it.
+	await get_tree().process_frame
 	Analytics.enabled = false
 	Analytics.echo = false
 	Save.path = "user://test_save.json"

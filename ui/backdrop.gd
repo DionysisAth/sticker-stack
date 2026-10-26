@@ -5,7 +5,7 @@ extends RefCounted
 
 static func make(level: int) -> TextureRect:
 	var r := TextureRect.new()
-	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	r.stretch_mode = TextureRect.STRETCH_SCALE
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var cols := UITheme.backdrop(level)

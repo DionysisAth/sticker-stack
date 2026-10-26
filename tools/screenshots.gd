@@ -12,7 +12,7 @@ func _ready() -> void:
 	Save.path = "user://screenshot_save.json"
 	Save.reset()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
-	get_tree().root.theme = UITheme.build()
+	get_tree().root.theme = UITheme.get_theme()
 	await _shots()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Save.path))
 	get_tree().quit()

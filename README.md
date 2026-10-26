@@ -6,6 +6,13 @@ Levels run as one endless line, and a new mechanic arrives every 5 levels.
 
 Built with **Godot 4.7** (GDScript, Compatibility renderer, portrait).
 
+<p>
+<img src="docs/screenshots/01_home.png" width="200" alt="Home screen">
+<img src="docs/screenshots/04_level_12.png" width="200" alt="Level 12 with mystery stickers and rolls">
+<img src="docs/screenshots/04_level_37.png" width="200" alt="Level 37 with side dispensers and a nearly full tray">
+<img src="docs/screenshots/06_fail_card.png" width="200" alt="Out of room card">
+</p>
+
 **Test APK (Android):** [latest build of `main`](https://github.com/DionysisAth/sticker-stack/releases/download/test-build/sticker-stack-debug.apk)
 (published by CI after the tests and the emulator check pass).
 
@@ -16,6 +23,12 @@ Built with **Godot 4.7** (GDScript, Compatibility renderer, portrait).
    click to tap.
 
 The level editor is in **Settings → Level editor** (debug builds only).
+
+To capture screenshots of the real screens (as in `docs/screenshots/`):
+
+```sh
+xvfb-run -s "-screen 0 1280x1400x24" godot --path . --resolution 720x1280 res://tools/screenshots.tscn
+```
 
 ## Tests
 

@@ -3,7 +3,9 @@ extends Control
 ## Draws the pile from a BoardState and turns touches into sticker taps.
 ## Positions are in half-sticker steps; higher layers sit a little higher so
 ## the pile reads as a stack. Dispensers sit in columns beside the pile, and
-## stickers sent back by Return 3 sit in a row under it.
+## stickers sent back by Return 3 sit in a row under it, between the two
+## dispensers (when the level has them). Keeping everything inside the pile's
+## width keeps stickers big enough to tap (48 dp and up).
 
 signal sticker_tapped(id: int)
 
@@ -17,7 +19,7 @@ var colorblind := false
 
 var _origin := Vector2.ZERO
 var _bounds := Rect2i(0, 0, 12, 14)
-var _queue_x := [-3.2, 13.2]
+var _queue_x := [0.0, 10.0]
 var _sheet_rect := Rect2()
 var _layer: Node2D
 
@@ -106,6 +108,7 @@ func _apply(s: Sticker, v: StickerView, animate: bool) -> void:
 				if o.alive and o.queue == s.queue and o.id != s.id:
 					behind += 1
 			v.queue_depth = behind
+			v.queue_side = -1.0 if s.queue == 0 else 1.0
 	v.visible = visible_now
 	v.z_index = s.z + (200 if s.returned else 0)
 	var target := _pos_of(s)
@@ -121,11 +124,10 @@ func _apply(s: Sticker, v: StickerView, animate: bool) -> void:
 
 func _pos_of(s: Sticker) -> Vector2:
 	if s.queue >= 0:
-		var front_y := float(_bounds.end.y) - 1.0
-		return _origin + Vector2(_queue_x[s.queue] + 1.0, front_y) * cell
+		return _origin + Vector2(_queue_x[s.queue] + 1.0, _row_y() + 1.0) * cell
 	var y := float(s.y)
 	if s.returned:
-		y = float(_bounds.end.y) + 0.7 + float(s.y - BoardState.RETURN_ROW_Y)
+		y = _row_y() + float(s.y - BoardState.RETURN_ROW_Y)
 	return _origin + Vector2(s.x + 1.0, y + 1.0 - s.z * LAYER_LIFT) * cell
 
 
@@ -146,19 +148,25 @@ func _compute_bounds() -> void:
 		y0 = 0
 		x1 = 12
 		y1 = 12
-	# The return row needs x 2..10.
-	x0 = mini(x0, 2)
-	x1 = maxi(x1, 10)
+	# The bottom row (dispensers and Return 3) needs x 0..12 with
+	# dispensers, 3..9 without.
+	var queues := state.has_rule("dispenser")
+	x0 = mini(x0, 0 if queues else 3)
+	x1 = maxi(x1, 12 if queues else 9)
 	_bounds = Rect2i(x0, y0, x1 - x0, y1 - y0)
-	_queue_x = [float(x0) - 3.2, float(x1) + 1.2]
+	_queue_x = [float(x0), float(x1) - 2.0]
+
+
+## Top of the row under the pile.
+func _row_y() -> float:
+	return float(_bounds.end.y) + 0.7
 
 
 func _layout() -> void:
 	if state == null:
 		return
-	var has_queues := state.has_rule("dispenser")
-	var x0 := float(_bounds.position.x) - (3.4 if has_queues else 0.4)
-	var x1 := float(_bounds.end.x) + (3.4 if has_queues else 0.4)
+	var x0 := float(_bounds.position.x) - 0.4
+	var x1 := float(_bounds.end.x) + 0.4
 	var y0 := float(_bounds.position.y) - 0.6
 	var y1 := float(_bounds.end.y) + 2.9   # room for the return row
 	cell = minf(minf(size.x / (x1 - x0), size.y / (y1 - y0)), MAX_CELL)
@@ -187,8 +195,8 @@ func _draw() -> void:
 	# Dispenser chutes.
 	if state.has_rule("dispenser"):
 		for q in 2:
-			var c := _origin + Vector2(_queue_x[q] + 1.0, float(_bounds.end.y) - 1.0) * cell
-			var r := Rect2(c - Vector2(cell * 1.25, cell * 4.6), Vector2(cell * 2.5, cell * 5.85))
+			var c := _origin + Vector2(_queue_x[q] + 1.0, _row_y() + 1.0) * cell
+			var r := Rect2(c - Vector2(cell * 1.3, cell * 1.3), Vector2(cell * 2.6, cell * 2.75))
 			var chute := StyleBoxFlat.new()
 			chute.bg_color = Color(1, 1, 1, 0.35)
 			chute.set_corner_radius_all(int(cell * 0.6))

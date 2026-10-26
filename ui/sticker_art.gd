@@ -129,6 +129,8 @@ static func badge(ci: CanvasItem, at: Vector2, radius: float, text: String, bg: 
 
 
 static func _text(ci: CanvasItem, baseline_center: Vector2, text: String, size: int, color: Color) -> void:
+	if size <= 0:
+		return
 	var font := UITheme.font_bold()
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	ci.draw_string(font, baseline_center - Vector2(w / 2.0, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)

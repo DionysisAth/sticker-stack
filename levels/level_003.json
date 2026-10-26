@@ -1,0 +1,30 @@
+{
+  "level": 3,
+  "hard": false,
+  "tutorial": "tray",
+  "seed": 3029,
+  "bot_win_rate": 1.0,
+  "types": [
+    {"shape":"diamond","color":5},
+    {"shape":"square","color":9},
+    {"shape":"triangle","color":0}
+  ],
+  "stickers": [
+    {"type":0,"x":4,"y":6,"z":0},
+    {"type":1,"x":6,"y":6,"z":0},
+    {"type":0,"x":4,"y":4,"z":0},
+    {"type":0,"x":6,"y":4,"z":0},
+    {"type":0,"x":4,"y":8,"z":0},
+    {"type":1,"x":6,"y":8,"z":0},
+    {"type":1,"x":2,"y":6,"z":0},
+    {"type":2,"x":8,"y":6,"z":0},
+    {"type":1,"x":2,"y":10,"z":0},
+    {"type":1,"x":5,"y":5,"z":1},
+    {"type":2,"x":5,"y":7,"z":1},
+    {"type":1,"x":3,"y":7,"z":1},
+    {"type":2,"x":7,"y":7,"z":1},
+    {"type":0,"x":5,"y":9,"z":1},
+    {"type":0,"x":5,"y":3,"z":1}
+  ],
+  "solution": [12,7,10,13,5,14,8,9,11,4,6,0,3,1,2]
+}

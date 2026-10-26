@@ -1,0 +1,24 @@
+{
+  "level": 1,
+  "hard": false,
+  "tutorial": "basics",
+  "seed": 1029,
+  "bot_win_rate": 1.0,
+  "types": [
+    {"shape":"circle","color":2},
+    {"shape":"hexagon","color":3},
+    {"shape":"cloud","color":6}
+  ],
+  "stickers": [
+    {"type":2,"x":4,"y":4,"z":0},
+    {"type":1,"x":6,"y":4,"z":0},
+    {"type":0,"x":4,"y":8,"z":0},
+    {"type":2,"x":6,"y":8,"z":0},
+    {"type":1,"x":4,"y":6,"z":0},
+    {"type":0,"x":6,"y":6,"z":0},
+    {"type":1,"x":2,"y":6,"z":0},
+    {"type":0,"x":8,"y":6,"z":0},
+    {"type":2,"x":2,"y":4,"z":0}
+  ],
+  "solution": [4,1,6,8,3,0,7,5,2]
+}
