@@ -1,0 +1,89 @@
+name: Release builds
+
+# Manual: a signed Android App Bundle for Google Play, and the iOS Xcode
+# project for TestFlight. Each job skips itself when its secrets are missing.
+#
+# Android secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS
+# iOS secret: IOS_TEAM_ID (Apple Developer team id)
+
+on:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  android-aab:
+    name: Signed AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Android signing secrets are not set; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/cache@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          path: ~/godot
+          key: godot-templates-${{ runner.os }}-${{ env.GODOT_VERSION }}
+      - name: Set up Godot and export templates
+        if: steps.check.outputs.skip != 'true'
+        run: ci/setup_godot.sh templates
+      - name: Export signed AAB
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: ci/export_android.sh release
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          name: sticker-stack-aab
+          path: build/android/sticker-stack.aab
+
+  ios:
+    name: iOS Xcode project
+    runs-on: macos-latest
+    timeout-minutes: 40
+    env:
+      IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$IOS_TEAM_ID" ]; then
+            echo "IOS_TEAM_ID is not set; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/cache@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          path: ~/godot
+          key: godot-templates-${{ runner.os }}-${{ env.GODOT_VERSION }}
+      - name: Set up Godot and export templates
+        if: steps.check.outputs.skip != 'true'
+        run: ci/setup_godot.sh templates
+      - name: Export Xcode project
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: ci/export_ios.sh
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          name: sticker-stack-xcode-project
+          path: build/ios/

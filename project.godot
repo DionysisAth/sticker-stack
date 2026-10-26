@@ -1,0 +1,47 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Sticker Stack"
+config/description="Peel stickers off the pile, match three in the tray."
+config/version="0.1.0"
+run/main_scene="res://ui/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://assets/icon.svg"
+boot_splash/bg_color=Color(1, 0.86, 0.74, 1)
+boot_splash/show_image=false
+
+[autoload]
+
+Save="*res://core/save.gd"
+Analytics="*res://core/analytics.gd"
+Audio="*res://core/audio.gd"
+Haptics="*res://core/haptics.gd"
+Nav="*res://core/nav.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/size/window_width_override=405
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+theme/custom="res://ui/theme.tres"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(1, 0.86, 0.74, 1)

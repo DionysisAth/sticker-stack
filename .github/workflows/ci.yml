@@ -1,0 +1,117 @@
+name: CI
+
+# Every push: unit tests, debug APK, and an Android emulator startup test.
+# Pushes to main also publish the APK to the "test-build" release, a public
+# download link for testers:
+# https://github.com/DionysisAth/sticker-stack/releases/download/test-build/sticker-stack-debug.apk
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-editor-${{ runner.os }}-${{ env.GODOT_VERSION }}
+      - name: Set up Godot
+        run: ci/setup_godot.sh
+      - name: Run tests
+        run: ci/run_tests.sh
+
+  android:
+    name: Debug APK
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-templates-${{ runner.os }}-${{ env.GODOT_VERSION }}
+      - name: Set up Godot and export templates
+        run: ci/setup_godot.sh templates
+      - name: Export debug APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: ci/export_android.sh debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sticker-stack-debug-apk
+          path: build/android/sticker-stack-debug.apk
+          if-no-files-found: error
+
+  emulator:
+    name: Emulator startup test
+    needs: android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sticker-stack-debug-apk
+          path: build/android
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Start emulator and launch the app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: ci/emulator_smoke.sh build/android/sticker-stack-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-screenshot-and-logcat
+          path: build/emulator/
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish test APK
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: emulator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sticker-stack-debug-apk
+          path: build/android
+      - name: Upload to the test-build release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view test-build >/dev/null 2>&1 || \
+            gh release create test-build --prerelease --title "Latest test build" \
+              --notes "Debug APK from the latest green build of main. Install on Android to test."
+          gh release upload test-build build/android/sticker-stack-debug.apk --clobber
+          gh release edit test-build --notes "Debug APK from main, build ${{ github.run_number }} (${GITHUB_SHA::7})."
