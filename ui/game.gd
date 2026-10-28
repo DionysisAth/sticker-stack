@@ -42,6 +42,14 @@ var _hint: PointerHand
 var _hint_picks_left := 0
 var _card: Card
 var _ended := false
+var _flame: StreakFlame
+## Auto-finish: running, how many taps it made, the level's sticker count,
+## and a token that changes with every level start (to stop a stale chain).
+var _auto := false
+var _auto_taps := 0
+var _total := 0
+var _token := 0
+var _peel_pitch := 1.0
 
 
 func _ready() -> void:
@@ -97,9 +105,9 @@ func _build_ui() -> void:
 	hard_tag.add_theme_stylebox_override("normal", tag_box)
 	hard_tag.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	mid.add_child(hard_tag)
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(84, 84)
-	top.add_child(spacer)
+	# The win-streak flame balances the home button on the other side.
+	_flame = StreakFlame.make(0, 84)
+	top.add_child(_flame)
 
 	board = BoardView.new()
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -170,6 +178,13 @@ func start_level(n: int) -> void:
 	_danger = 0
 	tray_view.set_fill(0)
 	_hint_picks_left = 3 if n <= 3 else 0
+	_token += 1
+	_auto = false
+	_auto_taps = 0
+	_peel_pitch = 1.0
+	_total = AutoFinish.total(state)
+	# A retry (or coming back to a level) can't extend the streak any more.
+	_show_streak(Save.streak if not test_mode and _attempt <= 1 else 0)
 	_update_boosters()
 	_drop_in()
 	_intro_cards()
@@ -217,7 +232,7 @@ func _set_backdrop(n: int) -> void:
 # --- Input and events ------------------------------------------------------
 
 func _on_sticker_tapped(id: int) -> void:
-	if _card != null or _ended or state.status != BoardState.Status.PLAYING:
+	if _card != null or _ended or _auto or state.status != BoardState.Status.PLAYING:
 		return
 	state.tap(id)
 	_process_events()
@@ -274,6 +289,37 @@ func _process_events() -> void:
 	_update_danger()
 	_update_boosters()
 	_update_hint()
+	_maybe_auto_finish()
+
+
+## Starts auto-finish when no choice is left (see game/auto_finish.gd).
+func _maybe_auto_finish() -> void:
+	if _auto or _card != null or _ended or state.status != BoardState.Status.PLAYING:
+		return
+	var taps := AutoFinish.plan(state, _total)
+	if not taps.is_empty():
+		_run_auto(taps)
+
+
+## Peels the rest in a fast chain that speeds up, the peel rising in pitch.
+func _run_auto(taps: Array[int]) -> void:
+	_auto = true
+	var token := _token
+	_update_boosters()
+	Fx.float_text(fx, fx.to_local(board.get_global_rect().get_center()), "Finishing!", UITheme.ACCENT_DARK)
+	await get_tree().create_timer(0.35).timeout
+	for i in taps.size():
+		if token != _token or not is_inside_tree() or state.status != BoardState.Status.PLAYING:
+			break
+		_peel_pitch = minf(1.0 + 0.05 * i, 1.8)
+		state.tap(taps[i])
+		_auto_taps += 1
+		_process_events()
+		await get_tree().create_timer(maxf(0.08, 0.17 - 0.012 * i)).timeout
+	if token == _token:
+		_peel_pitch = 1.0
+		_auto = false
+		_update_boosters()
 
 
 func _on_blocked(e: Dictionary) -> void:
@@ -329,7 +375,7 @@ func _fly(e: Dictionary) -> void:
 	var p0 := fx.to_local(start)
 	var p1 := fx.to_local(tray_view.slot_global(idx))
 	var k := tray_view.slot_size() / maxf(v.size, 1.0) * 1.05
-	Audio.play("peel")
+	Audio.play("peel", _peel_pitch)
 	Haptics.tick()
 	var t := v.create_tween()
 	if Save.setting("reduce_motion"):
@@ -455,11 +501,13 @@ func _update_hint() -> void:
 func _on_won() -> void:
 	_ended = true
 	var seconds := Time.get_ticks_msec() / 1000.0 - _t_start
+	var result := {} if test_mode else Save.complete_level()
+	_show_streak(int(result.get("streak", 0)))
 	Analytics.track("level_clear", {
 		"level": level_n, "attempts": _attempt, "picks": state.picks,
 		"boosters_used": _boosters_used, "seconds": snappedf(seconds, 0.1),
+		"auto_taps": _auto_taps, "streak": int(result.get("streak", 0)),
 	})
-	var reward := "" if test_mode else Save.complete_level()
 	await get_tree().create_timer(FLY_TIME + 0.35).timeout
 	if not is_inside_tree():
 		return
@@ -470,7 +518,7 @@ func _on_won() -> void:
 	Fx.confetti(fx, mid + Vector2(180, 0), UITheme.STICKER_COLORS, 60, 1.4)
 	await get_tree().create_timer(0.55).timeout
 	if is_inside_tree():
-		_show_clear_card(reward)
+		_show_clear_card(result)
 
 
 func _on_failed(e: Dictionary) -> void:
@@ -507,20 +555,43 @@ func _close_card() -> void:
 	_update_hint()
 
 
-func _show_clear_card(reward: String) -> void:
+## The clear card: the booster jar fills a segment (and pops open when
+## full), the streak flame shows the first-try streak, then Next bounces in.
+func _show_clear_card(result: Dictionary) -> void:
 	var c := _open_card()
 	c.box.add_child(UITheme.label("Level %d cleared!" % level_n, 50, UITheme.INK, true))
-	if reward != "":
-		var name := ""
-		for info in BOOSTER_INFO:
-			if info[0] == reward:
-				name = info[1]
-		c.box.add_child(UITheme.label("+1 %s booster" % name, 30, UITheme.GO_DARK, true))
+	var next_delay := 0.25
+	if not result.is_empty():
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 56)
+		c.box.add_child(row)
+		var fill: int = result.jar
+		var jar := RewardJar.make(fill - 1, 120)
+		row.add_child(_with_caption(jar, "Booster jar %d/%d" % [fill, Save.JAR_SIZE]))
+		var streak: int = result.streak
+		var flame := StreakFlame.make(streak, 120)
+		flame.custom_minimum_size = jar.custom_minimum_size
+		var caption := "%d in a row!" % streak if streak >= 2 else ("First try!" if streak == 1 else "No streak")
+		row.add_child(_with_caption(flame, caption))
+		var rewards := VBoxContainer.new()
+		c.box.add_child(rewards)
+		jar.animate_to(fill, 0.45)
+		if streak > 0:
+			_pulse(flame, 0.3)
+		if result.jar_reward != "":
+			next_delay += 0.9
+			jar.opened.connect(_reward_pop.bind(c, rewards, "+1 %s from the jar!" % _booster_name(result.jar_reward), jar))
+		if result.streak_reward != "":
+			next_delay += 0.5
+			var t := create_tween()
+			t.tween_interval(next_delay - 0.3)
+			t.tween_callback(_reward_pop.bind(c, rewards, "+1 %s for a %d-level streak!" % [_booster_name(result.streak_reward), streak], flame))
 	var next := UITheme.button("Next", UITheme.GO, UITheme.GO_DARK, 44)
 	next.custom_minimum_size = Vector2(0, 116)
 	next.pressed.connect(_on_next)
 	c.box.add_child(next)
-	Card.bounce_in(next, 0.25)
+	Card.bounce_in(next, next_delay)
 	var upcoming := level_n + 1
 	var intro := Mechanics.next_intro_after(level_n)
 	if intro > 0:
@@ -541,6 +612,8 @@ func _show_fail_card(reason: String) -> void:
 	var c := _open_card()
 	c.box.add_child(UITheme.label(String(FAIL_TITLES.get(reason, "Out of room")), 50, UITheme.INK, true))
 	c.box.add_child(UITheme.label("Same pile, same chance. You've got this!", 28, UITheme.INK_SOFT))
+	if Save.streak >= 2 and not test_mode:
+		c.box.add_child(UITheme.label("Trying again ends your %d-level streak." % Save.streak, 26, UITheme.ACCENT_DARK, true))
 	var again := UITheme.button("Try again", UITheme.GO, UITheme.GO_DARK, 42)
 	again.custom_minimum_size = Vector2(0, 110)
 	var on_again := func() -> void:
@@ -569,6 +642,51 @@ func _show_fail_card(reason: String) -> void:
 				_use_booster(which)
 			b.pressed.connect(use.bind(h[0]))
 			row.add_child(b)
+
+
+func _with_caption(widget: Control, caption: String) -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	widget.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(widget)
+	col.add_child(UITheme.label(caption, 22, UITheme.INK_SOFT, true))
+	return col
+
+
+## A reward line that bounces in, with a sparkle burst from where it came from.
+func _reward_pop(c: Card, box: VBoxContainer, text: String, from: Control) -> void:
+	if not is_instance_valid(c) or not is_instance_valid(box):
+		return
+	var l := UITheme.label(text, 30, UITheme.GO_DARK, true)
+	box.add_child(l)
+	Card.bounce_in(l, 0.0)
+	Audio.play("unlock", 1.2)
+	Haptics.tap()
+	var at := c.get_global_transform().affine_inverse() * from.get_global_rect().get_center()
+	Fx.confetti(c, at, [Color("#ffd23f"), UITheme.ACCENT, Color.WHITE], 30, 0.8)
+
+
+func _pulse(node: Control, delay: float) -> void:
+	if Save.setting("reduce_motion"):
+		return
+	await get_tree().process_frame
+	node.pivot_offset = node.size / 2.0
+	var t := node.create_tween()
+	t.tween_interval(delay)
+	t.tween_property(node, "scale", Vector2(1.25, 1.25), 0.12)
+	t.tween_property(node, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func _show_streak(n: int) -> void:
+	_flame.set_streak(n)
+	_flame.modulate.a = 1.0 if n > 0 else 0.0
+
+
+func _booster_name(id: String) -> String:
+	for info in BOOSTER_INFO:
+		if info[0] == id:
+			return info[1]
+	return id
 
 
 func _show_hard_card() -> void:
@@ -621,7 +739,7 @@ func _on_home() -> void:
 # --- Boosters --------------------------------------------------------------
 
 func _use_booster(id: String) -> void:
-	if _ended or (_card != null):
+	if _ended or _auto or (_card != null):
 		return
 	if not Save.has_booster(id):
 		Fx.float_text(fx, fx.to_local(booster_buttons[id].get_global_rect().get_center()) + Vector2(0, -90), "None left")
@@ -666,4 +784,4 @@ func _update_boosters() -> void:
 				usable = state.can_return()
 			"shuffle":
 				usable = state.can_shuffle()
-		b.disabled = not usable or _ended
+		b.disabled = not usable or _ended or _auto

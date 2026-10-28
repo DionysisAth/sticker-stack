@@ -39,6 +39,18 @@ still needs a person, an account or a real phone.
   pop with confetti in the sticker's colour; combo chime that rises in pitch;
   red pulsing tray edge with a heartbeat haptic at 5 and 6 of 7; confetti and
   bouncing Next button on clear.
+- **After the plan:** three additions to make clearing more satisfying.
+  - *Auto-finish:* once no choice is left (everything uncovered, no locks,
+    ice, wrap, fuses or rainbows, and no order could fill the tray) and at
+    most 40% of the pile is left, the game peels the rest in a fast chain
+    with rising pitch. Not on levels 1-3. It starts on 45 of the 50 levels,
+    with 2-9 stickers left.
+  - *Booster jar:* each clear adds a segment; the fifth pops the lid and gives
+    a booster (this replaces the silent +1 every 5 clears).
+  - *Win streak:* clearing on the first try (boosters allowed) grows a flame
+    shown in the top bar, on the clear card and on home. Retrying, or leaving
+    and coming back, ends it. Streaks of 3, 5 and 10, then every 5 more, give
+    a booster. The fail card warns before a retry ends a streak of 2 or more.
 - **Accessibility:** colour-blind labels, reduce-motion setting, touch targets
   over 48 dp, tray and boosters in the bottom third.
 - **Analytics:** `level_start`, `level_clear`, `level_fail`, `booster_used`,
@@ -65,8 +77,10 @@ still needs a person, an account or a real phone.
 - **Art and sound are generated in code** (vector drawing and synthesized
   sounds), so there are no art or audio files to manage yet. A real art and
   sound pass can replace them later.
-- **Save** also keeps attempts at the current level (for analytics), total
-  clears (for the booster reward) and which tutorial cards were shown.
+- **Save** also keeps attempts at the current level (for analytics and the
+  streak), total clears (for the booster jar), the current and best streak,
+  and which tutorial cards were shown. `level_clear` also reports
+  `auto_taps` and `streak`.
 - **Package id:** `com.dionysisath.stickerstack` (change it in
   `export_presets.cfg` before the first store upload if you want another).
 

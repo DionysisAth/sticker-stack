@@ -19,9 +19,13 @@ func _ready() -> void:
 
 
 func _shots() -> void:
-	# Home.
+	# Home, with a streak going and the jar part full.
 	Save.level = 12
+	Save.streak = 4
+	Save.clears = 13
 	await _open("res://ui/home.tscn", "01_home")
+	Save.streak = 0
+	Save.clears = 0
 	# Level 1 tutorial card.
 	Save.level = 1
 	Nav.params = {"level": 1}
@@ -45,12 +49,30 @@ func _shots() -> void:
 		await _wait(0.6)
 		await _snap("04_level_%d" % n)
 		_free(g)
-	# Clear card.
+	# Auto-finish in the middle of its chain.
+	g = await _open_game(12)
+	if g._card != null:
+		g._close_card()
+		await _wait(0.3)
+	for id in g.level.solution:
+		if g._auto:
+			break
+		g._on_sticker_tapped(int(id))
+		await _wait(0.05)
+	await _wait(0.75)
+	await _snap("05_auto_finish")
+	_free(g)
+	# Clear card where the jar fills up and a streak of 3 lands.
+	Save.clears = 4
+	Save.streak = 2
+	Save.attempts = 0
 	g = await _open_game(9)
 	for id in g.level.solution:
+		if g._auto:
+			break
 		g._on_sticker_tapped(int(id))
 		await get_tree().process_frame
-	await _wait(1.7)
+	await _wait(4.5)
 	await _snap("05_clear_card")
 	_free(g)
 	# Fail card: fill the tray with singles.

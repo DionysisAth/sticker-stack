@@ -51,6 +51,15 @@ func _ready() -> void:
 	if Difficulty.is_hard(n):
 		var tag := UITheme.label("HARD LEVEL", 28, UITheme.DANGER, true)
 		col.add_child(tag)
+	# Progress you keep: the first-try streak and the booster jar.
+	var status := HBoxContainer.new()
+	status.alignment = BoxContainer.ALIGNMENT_CENTER
+	status.add_theme_constant_override("separation", 40)
+	col.add_child(status)
+	if Save.streak > 0:
+		status.add_child(_badge(StreakFlame.make(Save.streak, 72), "%d in a row" % Save.streak))
+	var jar := RewardJar.make(Save.jar_fill(), 72)
+	status.add_child(_badge(jar, "Jar %d/%d" % [Save.jar_fill(), Save.JAR_SIZE]))
 	var play := UITheme.button("Play · Level %d" % n, UITheme.GO, UITheme.GO_DARK, 50)
 	play.custom_minimum_size = Vector2(0, 150)
 	play.pressed.connect(func(): Nav.go("game", {"level": Save.level}))
@@ -76,6 +85,14 @@ func _ready() -> void:
 		v.add_child(b)
 		v.add_child(UITheme.label(info[1], 22, UITheme.INK, true))
 		row.add_child(v)
+
+
+func _badge(widget: Control, caption: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.add_child(widget)
+	row.add_child(UITheme.label(caption, 26, UITheme.INK, true))
+	return row
 
 
 func _add_decoration() -> void:
