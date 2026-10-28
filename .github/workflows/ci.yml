@@ -2,7 +2,8 @@ name: CI
 
 # Every push: unit tests, debug APK, and an Android emulator startup test.
 # Pushes to main also publish the APK to the "test-build" release, a public
-# download link for testers:
+# download link for testers. Running the workflow by hand (Actions > CI >
+# Run workflow) publishes it from any branch:
 # https://github.com/DionysisAth/sticker-stack/releases/download/test-build/sticker-stack-debug.apk
 
 on:
@@ -97,7 +98,7 @@ jobs:
 
   publish:
     name: Publish test APK
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: emulator
     runs-on: ubuntu-latest
     steps:
@@ -114,4 +115,4 @@ jobs:
             gh release create test-build --prerelease --title "Latest test build" \
               --notes "Debug APK from the latest green build of main. Install on Android to test."
           gh release upload test-build build/android/sticker-stack-debug.apk --clobber
-          gh release edit test-build --notes "Debug APK from main, build ${{ github.run_number }} (${GITHUB_SHA::7})."
+          gh release edit test-build --notes "Debug APK from ${GITHUB_REF_NAME}, build ${{ github.run_number }} (${GITHUB_SHA::7})."
