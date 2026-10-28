@@ -7,10 +7,10 @@ Levels run as one endless line, and a new mechanic arrives every 5 levels.
 Built with **Godot 4.7** (GDScript, Compatibility renderer, portrait).
 
 <p>
-<img src="docs/screenshots/01_home.png" width="200" alt="Home screen">
-<img src="docs/screenshots/04_level_12.png" width="200" alt="Level 12 with mystery stickers and rolls">
-<img src="docs/screenshots/04_level_37.png" width="200" alt="Level 37 with side dispensers and a nearly full tray">
-<img src="docs/screenshots/06_fail_card.png" width="200" alt="Out of room card">
+<img src="docs/screenshots/01_home.png" width="200" alt="Home screen with the streak flame and booster jar">
+<img src="docs/screenshots/04_level_12.png" width="200" alt="Level 12 half cleared, the hidden picture showing through, a Magnet just earned">
+<img src="docs/screenshots/05_picture_complete.png" width="200" alt="Picture complete on clearing a level">
+<img src="docs/screenshots/08_magnet_pull.png" width="200" alt="The Magnet pulling a buried triple out of the pile">
 </p>
 
 **Test APK (Android):** [latest build of `main`](https://github.com/DionysisAth/sticker-stack/releases/download/test-build/sticker-stack-debug.apk)

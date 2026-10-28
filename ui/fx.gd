@@ -56,9 +56,24 @@ static func confetti(parent: Node, at: Vector2, colors: Array, amount := 26, spr
 	p.finished.connect(p.queue_free)
 
 
+## An expanding ring (the shockwave of a triple).
+static func ring(parent: Node, at: Vector2, color: Color, radius := 120.0) -> void:
+	if Save.setting("reduce_motion"):
+		return
+	var r := RingFx.new()
+	r.position = at
+	r.color = color
+	r.z_index = 450
+	parent.add_child(r)
+	var t := r.create_tween()
+	t.tween_property(r, "radius", radius, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	t.parallel().tween_property(r, "modulate:a", 0.0, 0.35)
+	t.tween_callback(r.queue_free)
+
+
 ## Text that floats up and fades (tips like "Locked!").
-static func float_text(parent: Node, at: Vector2, text: String, color := UITheme.INK) -> void:
-	var l := UITheme.label(text, 30, color, true)
+static func float_text(parent: Node, at: Vector2, text: String, color := UITheme.INK, size := 30) -> void:
+	var l := UITheme.label(text, size, color, true)
 	l.add_theme_color_override("font_outline_color", Color.WHITE)
 	l.add_theme_constant_override("outline_size", 10)
 	l.custom_minimum_size = Vector2(420, 50)

@@ -16,7 +16,7 @@ func test_clear_level_one_in_the_game_screen() -> void:
 		game._on_sticker_tapped(int(id))
 		await tree.process_frame
 	eq(game.state.status, BoardState.Status.WON)
-	await tree.create_timer(1.6).timeout
+	await tree.create_timer(2.5).timeout
 	eq(Save.level, 2, "progress saved")
 	check(game._card != null, "clear card shown")
 	game.queue_free()

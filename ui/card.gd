@@ -64,6 +64,8 @@ static func bounce_in(node: Control, delay := 0.3) -> void:
 	node.modulate.a = 0.0
 	node.scale = Vector2(0.6, 0.6)
 	await node.get_tree().process_frame
+	if not is_instance_valid(node):
+		return
 	node.pivot_offset = node.size / 2.0
 	var t := node.create_tween()
 	t.tween_interval(delay)

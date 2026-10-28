@@ -5,6 +5,8 @@ extends Button
 
 var icon_name := "home"
 var count := -1
+## Magnet: triples chained so far (0..3), drawn as a ring around the button.
+var chain := -1
 var face := UITheme.SKY
 var lip := UITheme.SKY_DARK
 
@@ -68,9 +70,22 @@ func _draw() -> void:
 				draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-0.5 * r, sgn * -0.05 * r - 0.3 * r), tip + Vector2(-0.5 * r, sgn * -0.05 * r + 0.3 * r)]), col)
 		"back":
 			draw_polyline(PackedVector2Array([c + Vector2(0.35 * r, -0.8 * r), c + Vector2(-0.45 * r, 0), c + Vector2(0.35 * r, 0.8 * r)]), col, w * 1.2, true)
+		"magnet":
+			draw_arc(c + Vector2(0, -0.05 * r), r * 0.62, 0, PI, 20, col, w * 1.5, true)
+			for sgn in [-1.0, 1.0]:
+				var x: float = sgn * r * 0.62
+				draw_line(c + Vector2(x, -0.05 * r), c + Vector2(x, -0.75 * r), col, w * 1.5, true)
+				draw_line(c + Vector2(x, -0.62 * r), c + Vector2(x, -0.95 * r), UITheme.DANGER if not disabled else Color(1, 1, 1, 0.6), w * 1.5, true)
 		"close":
 			draw_line(c + Vector2(-0.7, -0.7) * r, c + Vector2(0.7, 0.7) * r, col, w * 1.2, true)
 			draw_line(c + Vector2(-0.7, 0.7) * r, c + Vector2(0.7, -0.7) * r, col, w * 1.2, true)
+	if chain >= 0:
+		var rr := minf(size.x, size.y) * 0.5 + 6.0
+		for i in 3:
+			var a0 := -PI / 2 + i * TAU / 3.0 + 0.12
+			var a1 := a0 + TAU / 3.0 - 0.24
+			var lit := i < chain
+			draw_arc(size / 2.0, rr, a0, a1, 16, Color("#ffd23f") if lit else Color(1, 1, 1, 0.6), 7.0, true)
 	if count >= 0:
 		var at := Vector2(size.x - size.x * 0.14, size.y * 0.14)
 		StickerArt.badge(self, at, size.x * 0.15, str(count), UITheme.ACCENT if count > 0 else Color("#b0a4bf"), Color.WHITE)

@@ -164,3 +164,35 @@ func test_level_file_round_trip() -> void:
 	for x in st.stickers:
 		var back := Sticker.from_dict(x.to_dict(), x.id)
 		eq(back.to_dict(), x.to_dict())
+
+
+func test_magnet_pulls_a_covered_triple() -> void:
+	var st := BoardState.from_level(level(2, [
+		s(1, 0, 0, 1), s(0, 1, 1, 0), s(0, 6, 0), s(0, 8, 4), s(1, 10, 0), s(1, 4, 8),
+	]))
+	check(not st.is_free(st.stickers[1]), "the tapped sticker is covered")
+	check(st.magnet(1))
+	for id in [1, 2, 3]:
+		check(not st.stickers[id].alive, "sticker %d pulled" % id)
+	eq(st.tray.size(), 0, "cleared at once")
+	eq(st.picks, 1)
+
+
+func test_magnet_uses_what_the_tray_holds() -> void:
+	var st := BoardState.from_level(level(2, [
+		s(0, 0, 0), s(0, 2, 0), s(0, 4, 0), s(1, 6, 0), s(1, 8, 0), s(1, 10, 0),
+	]))
+	st.tap(0)
+	st.tap(3)
+	check(st.magnet(1))
+	check(not st.stickers[1].alive and not st.stickers[2].alive, "the tapped one plus one more")
+	eq(st.tray.types, [1] as Array[int], "the type-0 sticker in the tray cleared with them")
+
+
+func test_magnet_cannot_pull_held_stickers() -> void:
+	var st := BoardState.from_level(level(2, [
+		s(0, 0, 0), s(0, 2, 0, 0, {"kind": "ice", "ice": 3}), s(0, 4, 0, 0, {"kind": "padlock", "key": 1}),
+		s(1, 6, 0), s(1, 8, 0), s(1, 10, 0),
+	]))
+	check(st.magnet_group(0).is_empty(), "the other two are frozen and locked")
+	check(not st.magnet(0))

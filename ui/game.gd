@@ -37,6 +37,14 @@ var _t_start := 0.0
 var _boosters_used := 0
 var _combo := 0
 var _last_clear_pick := -10
+## Chain: triples in a row, each within 2 picks of the last. 3 earns a Magnet.
+const CHAIN_FOR_MAGNET := 3
+var _chain := 0
+var _magnets := 0
+var _magnets_earned := 0
+var _magnet_mode := false
+var magnet_button: IconButton
+var pile_meter: ProgressBar
 var _danger := 0
 var _hint: PointerHand
 var _hint_picks_left := 0
@@ -105,6 +113,22 @@ func _build_ui() -> void:
 	hard_tag.add_theme_stylebox_override("normal", tag_box)
 	hard_tag.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	mid.add_child(hard_tag)
+	# The pile meter fills as the pile is cleared.
+	pile_meter = ProgressBar.new()
+	pile_meter.custom_minimum_size = Vector2(260, 18)
+	pile_meter.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pile_meter.max_value = 1.0
+	pile_meter.step = 0.0
+	pile_meter.show_percentage = false
+	var meter_fill := StyleBoxFlat.new()
+	meter_fill.bg_color = UITheme.ACCENT
+	meter_fill.set_corner_radius_all(9)
+	var meter_bg := StyleBoxFlat.new()
+	meter_bg.bg_color = Color(1, 1, 1, 0.7)
+	meter_bg.set_corner_radius_all(9)
+	pile_meter.add_theme_stylebox_override("fill", meter_fill)
+	pile_meter.add_theme_stylebox_override("background", meter_bg)
+	mid.add_child(pile_meter)
 	# The win-streak flame balances the home button on the other side.
 	_flame = StreakFlame.make(0, 84)
 	top.add_child(_flame)
@@ -120,7 +144,7 @@ func _build_ui() -> void:
 
 	var boosters := HBoxContainer.new()
 	boosters.alignment = BoxContainer.ALIGNMENT_CENTER
-	boosters.add_theme_constant_override("separation", 46)
+	boosters.add_theme_constant_override("separation", 26)
 	boosters.custom_minimum_size = Vector2(0, 150)
 	col.add_child(boosters)
 	for info in BOOSTER_INFO:
@@ -133,6 +157,14 @@ func _build_ui() -> void:
 		v.add_child(UITheme.label(info[1], 24, UITheme.INK, true))
 		boosters.add_child(v)
 		booster_buttons[info[0]] = b
+	var mv := VBoxContainer.new()
+	mv.add_theme_constant_override("separation", 2)
+	magnet_button = IconButton.make("magnet", 104, Color("#ffb703"), Color("#d68c00"))
+	magnet_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	magnet_button.pressed.connect(_on_magnet_pressed)
+	mv.add_child(magnet_button)
+	mv.add_child(UITheme.label("Magnet", 24, UITheme.INK, true))
+	boosters.add_child(mv)
 
 	fx = Node2D.new()
 	fx.z_index = 10
@@ -166,6 +198,7 @@ func start_level(n: int) -> void:
 	level = Nav.params.level_data if test_mode else LevelData.load_level(n)
 	state = BoardState.from_level(level)
 	board.colorblind = Save.setting("colorblind")
+	board.picture = Picture.for_level(n)
 	board.setup(state)
 	_set_backdrop(n)
 	level_label.text = "Level %d" % n
@@ -175,6 +208,12 @@ func start_level(n: int) -> void:
 	_t_start = Time.get_ticks_msec() / 1000.0
 	_boosters_used = 0
 	_combo = 0
+	_chain = 0
+	_magnets = 0
+	_magnets_earned = 0
+	_magnet_mode = false
+	_last_clear_pick = -10
+	pile_meter.value = 0.0
 	_danger = 0
 	tray_view.set_fill(0)
 	_hint_picks_left = 3 if n <= 3 else 0
@@ -234,12 +273,20 @@ func _set_backdrop(n: int) -> void:
 func _on_sticker_tapped(id: int) -> void:
 	if _card != null or _ended or _auto or state.status != BoardState.Status.PLAYING:
 		return
+	if _magnet_mode:
+		_use_magnet(id)
+		return
 	state.tap(id)
 	_process_events()
 
 
 func _process_events() -> void:
-	for e in state.drain_events():
+	var cleared := false
+	var events := state.drain_events()
+	for e in events:
+		if e.e == "clear":
+			cleared = true
+	for e in events:
 		match e.e:
 			"blocked":
 				_on_blocked(e)
@@ -289,6 +336,11 @@ func _process_events() -> void:
 	_update_danger()
 	_update_boosters()
 	_update_hint()
+	_update_meter()
+	# The chain breaks once the next triple can't come within 2 picks.
+	if not cleared and _chain > 0 and state.picks - _last_clear_pick >= 2:
+		_chain = 0
+		_update_magnet()
 	_maybe_auto_finish()
 
 
@@ -416,45 +468,146 @@ func _layout_tray() -> void:
 			t.tween_property(v, "position", target, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
+## A triple: the three stickers jump together, merge and burst with a
+## shockwave, the pile bounces, and chained triples build toward a Magnet.
 func _pop_triple(e: Dictionary) -> void:
 	for uid in e.uids:
 		_popping[uid] = true
-	if state.picks - _last_clear_pick <= 2:
+	var by_magnet: bool = e.get("magnet", false)
+	if by_magnet:
+		_combo = 0
+	elif state.picks - _last_clear_pick <= 2 and _chain > 0:
+		_chain += 1
 		_combo += 1
 	else:
+		_chain = 1
 		_combo = 0
 	_last_clear_pick = state.picks
 	var combo := _combo
+	var earned := false
+	if _chain >= CHAIN_FOR_MAGNET:
+		_chain = 0
+		_magnets += 1
+		_magnets_earned += 1
+		earned = true
+	_update_magnet()
 	await get_tree().create_timer(FLY_TIME + 0.12).timeout
 	if not is_inside_tree():
 		return
+	var nodes: Array[StickerView] = []
 	var center := Vector2.ZERO
-	var n := 0
 	for uid in e.uids:
 		var v: StickerView = tray_nodes.get(uid)
 		if v == null:
 			continue
+		nodes.append(v)
 		center += v.position
-		n += 1
 		tray_nodes.erase(uid)
-		var t := v.create_tween()
-		t.tween_property(v, "scale", v.scale * 1.35, 0.1)
-		t.tween_property(v, "scale", Vector2.ZERO, 0.12)
-		t.parallel().tween_property(v, "modulate:a", 0.0, 0.12)
-		t.tween_callback(v.queue_free)
 	for uid in e.uids:
 		_popping.erase(uid)
+	if nodes.is_empty():
+		return
+	center /= nodes.size()
+	var lift := center + Vector2(0, -60)
 	var col := Color.WHITE
 	if e.type != Sticker.RAINBOW and e.type < state.types.size():
 		col = UITheme.sticker_color(int(state.types[e.type].color))
-	if n > 0:
-		Fx.confetti(fx, center / n, [col, col.lightened(0.4), Color.WHITE], 28)
+	var calm: bool = Save.setting("reduce_motion")
+	for v in nodes:
+		var t := v.create_tween()
+		if not calm:
+			t.tween_property(v, "position", lift, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			t.parallel().tween_property(v, "scale", v.scale * 1.3, 0.12)
+		t.tween_property(v, "scale", Vector2.ZERO, 0.1)
+		t.parallel().tween_property(v, "modulate:a", 0.0, 0.1)
+		t.tween_callback(v.queue_free)
+	await get_tree().create_timer(0.0 if calm else 0.14).timeout
+	if not is_inside_tree():
+		return
+	var big := mini(combo, 4)
+	Fx.confetti(fx, lift, [col, col.lightened(0.4), Color.WHITE, Color("#ffd23f")], 30 + big * 12, 0.9 + big * 0.15)
+	Fx.ring(fx, lift, col.lightened(0.3), 130.0 + big * 30.0)
 	Audio.play("chime", 1.0 + 0.12 * mini(combo, 6))
 	Audio.play("pop", 1.0 + 0.08 * mini(combo, 6), -4.0)
 	Haptics.tap()
-	if combo >= 2:
-		Fx.float_text(fx, center / maxf(n, 1) + Vector2(0, -90), "Combo x%d!" % (combo + 1), UITheme.ACCENT_DARK)
+	_bounce_pile(0.05 + big * 0.02)
+	if combo >= 1:
+		var cols := [UITheme.ACCENT_DARK, Color("#ff7b00"), UITheme.DANGER, Color("#8338ec")]
+		Fx.float_text(fx, lift + Vector2(0, -70), "Combo x%d!" % (combo + 1), cols[mini(combo - 1, 3)], 34 + big * 6)
+		if combo >= 2:
+			_shake(6.0 + big * 3.0)
+	if earned:
+		_magnet_earned_fx()
 	_layout_tray()
+
+
+## Every sticker on the board hops a little when a triple clears.
+func _bounce_pile(amount: float) -> void:
+	if Save.setting("reduce_motion"):
+		return
+	for v: StickerView in board.views.values():
+		var t := v.create_tween()
+		t.tween_property(v, "scale", Vector2.ONE * (1.0 + amount), 0.08)
+		t.tween_property(v, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _shake(px: float) -> void:
+	if Save.setting("reduce_motion"):
+		return
+	var t := create_tween()
+	for i in 5:
+		var k := px * (1.0 - i / 5.0)
+		t.tween_property(self, "position", Vector2(randf_range(-k, k), randf_range(-k, k)), 0.035)
+	t.tween_property(self, "position", Vector2.ZERO, 0.04)
+
+
+func _update_meter() -> void:
+	if _total <= 0:
+		return
+	var v := 1.0 - float(state.stickers_left()) / _total
+	var t := pile_meter.create_tween()
+	t.tween_property(pile_meter, "value", v, 0.25).set_ease(Tween.EASE_OUT)
+
+
+# --- Magnet ----------------------------------------------------------------
+
+func _update_magnet() -> void:
+	magnet_button.chain = _chain
+	magnet_button.set_count(_magnets)
+	magnet_button.disabled = _magnets <= 0 or _ended or _auto
+	magnet_button.modulate = Color(1.15, 1.15, 1.15) if _magnet_mode else Color.WHITE
+
+
+func _magnet_earned_fx() -> void:
+	var at := fx.to_local(magnet_button.get_global_rect().get_center())
+	Fx.confetti(fx, at, [Color("#ffd23f"), Color("#ffb703"), Color.WHITE], 36, 0.9)
+	Fx.ring(fx, at, Color("#ffd23f"), 110.0)
+	Fx.float_text(fx, at + Vector2(-60, -110), "Magnet earned!", Color("#d68c00"), 34)
+	Audio.play("unlock", 1.4)
+	Haptics.tap()
+	_pulse(magnet_button, 0.0)
+
+
+func _on_magnet_pressed() -> void:
+	if _magnets <= 0 or _ended or _auto or _card != null:
+		return
+	_magnet_mode = not _magnet_mode
+	_update_magnet()
+	if _magnet_mode:
+		Fx.float_text(fx, fx.to_local(board.get_global_rect().get_center()), "Tap any sticker to pull its triple", Color("#d68c00"))
+
+
+func _use_magnet(id: int) -> void:
+	if not state.magnet(id):
+		Audio.play("blocked")
+		Fx.float_text(fx, fx.to_local(board.sticker_global_pos(id)) + Vector2(0, -70), "Can't pull that one")
+		return
+	_magnets -= 1
+	_magnet_mode = false
+	Analytics.track("booster_used", {"level": level_n, "booster": "magnet", "tray_fill": state.tray.size()})
+	Audio.play("whoosh", 1.3)
+	_update_magnet()
+	_process_events()
 
 
 func _flip(id: int) -> void:
@@ -507,16 +660,20 @@ func _on_won() -> void:
 		"level": level_n, "attempts": _attempt, "picks": state.picks,
 		"boosters_used": _boosters_used, "seconds": snappedf(seconds, 0.1),
 		"auto_taps": _auto_taps, "streak": int(result.get("streak", 0)),
+		"magnets_earned": _magnets_earned,
 	})
 	await get_tree().create_timer(FLY_TIME + 0.35).timeout
 	if not is_inside_tree():
 		return
 	Audio.play("clear")
 	Haptics.tap()
+	board.reveal_all()
+	var pc := fx.to_local(board.get_global_transform() * board.picture_rect().get_center())
+	Fx.float_text(fx, pc + Vector2(0, -40), "Picture complete!", UITheme.ACCENT_DARK, 44)
 	var mid := size / 2.0
 	Fx.confetti(fx, mid + Vector2(-180, 0), UITheme.STICKER_COLORS, 60, 1.4)
 	Fx.confetti(fx, mid + Vector2(180, 0), UITheme.STICKER_COLORS, 60, 1.4)
-	await get_tree().create_timer(0.55).timeout
+	await get_tree().create_timer(1.3).timeout
 	if is_inside_tree():
 		_show_clear_card(result)
 
@@ -560,6 +717,7 @@ func _close_card() -> void:
 func _show_clear_card(result: Dictionary) -> void:
 	var c := _open_card()
 	c.box.add_child(UITheme.label("Level %d cleared!" % level_n, 50, UITheme.INK, true))
+	c.box.add_child(UITheme.label("You uncovered: %s" % Picture.name_of(board.picture), 26, UITheme.INK_SOFT, true))
 	var next_delay := 0.25
 	if not result.is_empty():
 		var row := HBoxContainer.new()
@@ -670,6 +828,8 @@ func _pulse(node: Control, delay: float) -> void:
 	if Save.setting("reduce_motion"):
 		return
 	await get_tree().process_frame
+	if not is_instance_valid(node):
+		return
 	node.pivot_offset = node.size / 2.0
 	var t := node.create_tween()
 	t.tween_interval(delay)
@@ -785,3 +945,4 @@ func _update_boosters() -> void:
 			"shuffle":
 				usable = state.can_shuffle()
 		b.disabled = not usable or _ended or _auto
+	_update_magnet()

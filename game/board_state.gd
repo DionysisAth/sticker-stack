@@ -303,6 +303,71 @@ func shuffle(tries := 6) -> bool:
 	return false
 
 
+## Magnet (earned in the level by chaining triples): pulls the triple of a
+## sticker's type out of the pile, covered or not, and clears it at once
+## together with any of that type already in the tray. Stickers held by a
+## mechanic (locked, frozen, glued, rolls) can't be pulled. Counts as one pick.
+func magnet(id: int) -> bool:
+	var group := magnet_group(id)
+	if group.is_empty():
+		return false
+	var t := stickers[id].type
+	_undo.clear()
+	var uids: Array[int] = []
+	# Stickers of that type already in the tray join the triple.
+	var i := tray.types.size() - 1
+	while i >= 0:
+		if tray.types[i] == t and uids.size() < 3 - group.size():
+			uids.append(tray.remove_at(i).uid)
+		i -= 1
+	for p in group:
+		_remove(p)
+		var uid := _next_uid
+		_next_uid += 1
+		uids.append(uid)
+		emit_event({"e": "pick", "id": p.id, "uid": uid, "type": t, "index": tray.size(), "stays": false, "magnet": true})
+	var res := {"type": t, "uids": uids, "rainbows": 0}
+	emit_event({"e": "clear", "type": t, "uids": uids, "magnet": true})
+	for r in _r_after_clear:
+		r.after_clear(self, res)
+	picks += 1
+	for r in _r_after_pick:
+		r.after_pick(self, group)
+	_check_end()
+	return true
+
+
+## The stickers a magnet on `id` would pull (that sticker first), or [] if
+## there aren't enough pullable ones of its type to finish a triple.
+func magnet_group(id: int) -> Array[Sticker]:
+	var none: Array[Sticker] = []
+	if status != Status.PLAYING or id < 0 or id >= stickers.size():
+		return none
+	var s := stickers[id]
+	if not s.alive or not _pullable(s):
+		return none
+	var need := 3 - tray.count_of(s.type) % 3
+	var others: Array[Sticker] = []
+	for o in stickers:
+		if o != s and o.alive and o.type == s.type and _pullable(o):
+			others.append(o)
+	if others.size() < need - 1:
+		return none
+	# Visible ones first, then the highest.
+	var visible_first := func(a: Sticker, b: Sticker) -> bool:
+		var fa := is_free(a)
+		var fb := is_free(b)
+		return fa if fa != fb else a.z > b.z
+	others.sort_custom(visible_first)
+	var group: Array[Sticker] = [s]
+	group.append_array(others.slice(0, need - 1))
+	return group
+
+
+func _pullable(s: Sticker) -> bool:
+	return s.type != Sticker.RAINBOW and s.key < 0 and s.ice == 0 and s.pair < 0 and s.roll.is_empty() and s.kind != "roll"
+
+
 func emit_event(e: Dictionary) -> void:
 	if record_events:
 		events.append(e)

@@ -51,6 +51,21 @@ still needs a person, an account or a real phone.
     shown in the top bar, on the clear card and on home. Retrying, or leaving
     and coming back, ends it. Streaks of 3, 5 and 10, then every 5 more, give
     a booster. The fail card warns before a retry ends a streak of 2 or more.
+- **Inside the level:** four additions so clearing feels like progress.
+  - *Hidden picture:* the sheet under the pile hides an illustration (eight
+    scenes drawn in code, one per level in turn). Each spot fades open once
+    no sticker covers it; on clear the rest of the paper fades, a shine
+    sweeps across and "Picture complete!" shows, and the clear card names it.
+  - *Pile meter* in the top bar fills as stickers are cleared.
+  - *Juicier triples:* the three stickers jump together and burst with
+    confetti and a shockwave ring, the pile hops, and back-to-back triples
+    show a bigger "Combo" and shake the screen a little (off with reduce
+    motion).
+  - *Magnet:* chaining 3 triples (each within 2 picks of the last) earns a
+    Magnet for this level; the ring around its button shows the chain. Tap
+    it, then any sticker, even a covered one, to pull and clear its whole
+    triple (stickers held by locks, ice, glue or rolls can't be pulled). It
+    counts as one pick. The bot doesn't use it, so it's a reward for skill.
 - **Accessibility:** colour-blind labels, reduce-motion setting, touch targets
   over 48 dp, tray and boosters in the bottom third.
 - **Analytics:** `level_start`, `level_clear`, `level_fail`, `booster_used`,
@@ -80,7 +95,8 @@ still needs a person, an account or a real phone.
 - **Save** also keeps attempts at the current level (for analytics and the
   streak), total clears (for the booster jar), the current and best streak,
   and which tutorial cards were shown. `level_clear` also reports
-  `auto_taps` and `streak`.
+  `auto_taps`, `streak` and `magnets_earned`; using a Magnet is a
+  `booster_used` event with `booster: "magnet"`.
 - **Package id:** `com.dionysisath.stickerstack` (change it in
   `export_presets.cfg` before the first store upload if you want another).
 

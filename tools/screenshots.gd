@@ -42,10 +42,13 @@ func _shots() -> void:
 		if g._card != null:
 			g._close_card()
 			await _wait(0.3)
+		# About half way through, so part of the picture shows.
 		var taps: Array = g.level.solution
-		for i in mini(taps.size(), 4 + n % 3):
+		for i in int(taps.size() * 0.55):
+			if g._auto or g.state.status != BoardState.Status.PLAYING:
+				break
 			g._on_sticker_tapped(int(taps[i]))
-			await _wait(0.08)
+			await _wait(0.06)
 		await _wait(0.6)
 		await _snap("04_level_%d" % n)
 		_free(g)
@@ -72,15 +75,39 @@ func _shots() -> void:
 			break
 		g._on_sticker_tapped(int(id))
 		await get_tree().process_frame
-	await _wait(4.5)
+	var guard := 0
+	while g.state.status != BoardState.Status.WON and guard < 100:
+		guard += 1
+		await _wait(0.1)
+	await _wait(1.0)
+	await _snap("05_picture_complete")
+	await _wait(3.0)
 	await _snap("05_clear_card")
+	_free(g)
+	# The Magnet pulling a covered triple.
+	g = await _open_game(21)
+	if g._card != null:
+		g._close_card()
+		await _wait(0.3)
+	g._magnets = 1
+	g._update_magnet()
+	await _snap("08_magnet_ready")
+	g._on_magnet_pressed()
+	var target := -1
+	for st in g.state.stickers:
+		if st.alive and not g.state.is_free(st) and not g.state.magnet_group(st.id).is_empty():
+			target = st.id
+			break
+	g._on_sticker_tapped(target)
+	await _wait(0.12)
+	await _snap("08_magnet_pull")
 	_free(g)
 	# Fail card: fill the tray with singles.
 	g = await _open_game(30)
 	if g._card != null:
 		g._close_card()
 		await _wait(0.3)
-	var guard := 0
+	guard = 0
 	while g.state.status == BoardState.Status.PLAYING and guard < 60:
 		guard += 1
 		var pick := -1
